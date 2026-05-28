@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SBIN Intraday Analyzer</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+
+<!-- ═══════════ HEADER ═══════════ -->
+<header class="header">
+  <div class="header-brand">
+    📈 SBIN Analyzer
+    <span>Angel One • NSE</span>
+  </div>
+
+  <div class="price-bar">
+    <div class="price-tile">
+      <div class="sym">SBIN</div>
+      <div class="ltp up" id="sbin-ltp">—</div>
+      <div class="chg" id="sbin-chg">—</div>
+    </div>
+    <div class="price-tile">
+      <div class="sym">NIFTY 50</div>
+      <div class="ltp up" id="nifty-ltp">—</div>
+      <div class="chg" id="nifty-chg">—</div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span class="live-dot" id="live-dot"></span>
+    <span class="clock" id="clock">—</span>
+    <button class="btn-refresh" onclick="refreshAll()">↻ Refresh</button>
+  </div>
+</header>
+
+<!-- ═══════════ BODY ═══════════ -->
+<div class="container">
+  <div class="grid-main">
+
+    <!-- ── LEFT COLUMN: Charts ── -->
+    <div>
+      <!-- SBIN Chart -->
+      <div class="card">
+        <div class="card-title">
+          <span>SBIN — Candlestick Chart</span>
+          <div class="tf-tabs">
+            <button class="tf-btn" onclick="setTF('1m')">1m</button>
+            <button class="tf-btn active" onclick="setTF('5m')">5m</button>
+            <button class="tf-btn" onclick="setTF('15m')">15m</button>
+            <button class="tf-btn" onclick="setTF('1h')">1h</button>
+            <button class="tf-btn" onclick="setTF('1d')">1D</button>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <div id="chart-sbin"></div>
+          <div class="chart-loading" id="loading-sbin"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- NIFTY Mini Chart -->
+      <div class="card">
+        <div class="card-title">NIFTY 50 — Reference Chart (same timeframe)</div>
+        <div class="chart-wrap">
+          <div id="chart-nifty"></div>
+          <div class="chart-loading" id="loading-nifty"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Correlation Heatmap -->
+      <div class="card">
+        <div class="card-title">
+          SBIN vs NIFTY — Daily Direction (last 30 days)
+          <span style="font-size:11px;color:var(--muted);">
+            <span style="color:var(--green);">■</span> Same &nbsp;
+            <span style="color:var(--red);">■</span> Opposite
+          </span>
+        </div>
+        <div class="heatmap" id="heatmap"></div>
+
+        <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <div class="level-item">
+            <span class="lbl">Correlation</span>
+            <span class="val" id="corr-val">—</span>
+          </div>
+          <div class="level-item">
+            <span class="lbl">Beta</span>
+            <span class="val" id="beta-val">—</span>
+          </div>
+          <div class="level-item">
+            <span class="lbl">Same Dir %</span>
+            <span class="val" id="same-pct">—</span>
+          </div>
+          <div class="level-item">
+            <span class="lbl">Last 30d Same</span>
+            <span class="val" id="l30-same">—</span>
+          </div>
+          <div class="level-item">
+            <span class="lbl">Last 60d Same</span>
+            <span class="val" id="l60-same">—</span>
+          </div>
+          <div class="level-item">
+            <span class="lbl">RS (10d avg)</span>
+            <span class="val" id="rs-val">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RIGHT COLUMN: Analysis ── -->
+    <div>
+
+      <!-- Signal Box -->
+      <div class="signal-box" id="signal-box" style="border-color:var(--yellow);color:var(--yellow)">
+        <div class="signal-label" id="signal-label">LOADING...</div>
+        <div class="signal-price" id="signal-price">—</div>
+        <div class="signal-sub" id="signal-tf">5m Timeframe</div>
+      </div>
+
+      <!-- Stop Loss & Targets -->
+      <div class="card">
+        <div class="card-title">Risk Levels (ATR-based)</div>
+        <div class="levels-grid">
+          <div class="level-item">
+            <span class="lbl">Stop Loss</span>
+            <span class="val down" id="sl-val">—</span>
+          </div>
+          <div class="level-item">
+            <span class="lbl">ATR</span>
+            <span class="val" id="atr-val">—</span>
+          </div>
+          <div class="level-item">
+            <span class="lbl">Target 1</span>
+            <span class="val up" id="t1-val">—</span>
+          </div>
+          <div class="level-item">
+            <span class="lbl">Target 2</span>
+            <span class="val up" id="t2-val">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Indicators -->
+      <div class="card">
+        <div class="card-title">Indicators</div>
+        <div class="ind-row">
+          <span class="ind-name">EMA 9</span>
+          <span class="ind-value" id="ema9-val">—</span>
+        </div>
+        <div class="ind-row">
+          <span class="ind-name">EMA 21</span>
+          <span class="ind-value" id="ema21-val">—</span>
+        </div>
+        <div class="ind-row">
+          <span class="ind-name">EMA 50</span>
+          <span class="ind-value" id="ema50-val">—</span>
+        </div>
+        <div class="ind-row">
+          <span class="ind-name">RSI (14)</span>
+          <span class="ind-value" id="rsi-val">—</span>
+        </div>
+        <div class="ind-row">
+          <span class="ind-name">MACD</span>
+          <span class="ind-value" id="macd-val">—</span>
+        </div>
+        <div class="ind-row">
+          <span class="ind-name">VWAP</span>
+          <span class="ind-value" id="vwap-val">—</span>
+        </div>
+        <div class="ind-row">
+          <span class="ind-name">BB Upper</span>
+          <span class="ind-value" id="bbu-val">—</span>
+        </div>
+        <div class="ind-row">
+          <span class="ind-name">BB Lower</span>
+          <span class="ind-value" id="bbl-val">—</span>
+        </div>
+      </div>
+
+      <!-- Signal Reasons -->
+      <div class="card">
+        <div class="card-title">Why This Signal?</div>
+        <ul class="reasons-list" id="reasons-list">
+          <li>Loading analysis...</li>
+        </ul>
+      </div>
+
+      <!-- Pivot Points (for 1D) -->
+      <div class="card" id="pivot-card" style="display:none">
+        <div class="card-title">Pivot Points (Daily)</div>
+        <table class="pivot-table" id="pivot-table"></table>
+      </div>
+
+      <!-- Correlation Bar -->
+      <div class="card">
+        <div class="card-title">SBIN–NIFTY Correlation Strength</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">
+          0 = No relation &nbsp;|&nbsp; 1 = Moves together &nbsp;|&nbsp; -1 = Moves opposite
+        </div>
+        <div class="corr-bar-wrap">
+          <div class="corr-bar-fill" id="corr-bar" style="width:0%;background:var(--green)"></div>
+        </div>
+        <div class="corr-stat">
+          <span>Pearson r</span>
+          <span class="corr-val" id="corr-r">—</span>
+        </div>
+        <div class="corr-stat">
+          <span>Beta (SBIN/NIFTY)</span>
+          <span class="corr-val" id="corr-beta">—</span>
+        </div>
+        <div class="corr-stat">
+          <span>Same Direction (90d)</span>
+          <span class="corr-val" id="corr-same">—</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;" id="corr-note"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
