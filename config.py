@@ -3,18 +3,29 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-ANGEL_API_KEY     = os.environ.get("ANGEL_API_KEY", "")
-ANGEL_SECRET_KEY  = os.environ.get("ANGEL_SECRET_KEY", "")
-ANGEL_CLIENT_ID   = os.environ.get("ANGEL_CLIENT_ID", "")
-ANGEL_PASSWORD    = os.environ.get("ANGEL_PASSWORD", "")
-ANGEL_MPIN        = os.environ.get("ANGEL_MPIN", "")
-ANGEL_TOTP_SECRET = os.environ.get("ANGEL_TOTP_SECRET", "")
-FLASK_SECRET_KEY  = os.environ.get("FLASK_SECRET_KEY", "dev-secret")
+def _get(key: str, fallback: str = "") -> str:
+    """Read from Streamlit secrets first, then env vars, then fallback."""
+    try:
+        import streamlit as st
+        val = st.secrets.get(key)
+        if val:
+            return str(val)
+    except Exception:
+        pass
+    return os.environ.get(key, fallback)
 
-# Angel One token IDs (NSE)
+ANGEL_API_KEY     = _get("ANGEL_API_KEY",     "LkKs5NJG")
+ANGEL_SECRET_KEY  = _get("ANGEL_SECRET_KEY",  "600734be-7bf2-4bfe-a00c-a5972673d16d")
+ANGEL_CLIENT_ID   = _get("ANGEL_CLIENT_ID",   "A114064")
+ANGEL_PASSWORD    = _get("ANGEL_PASSWORD",     "Mahadev1@#")
+ANGEL_MPIN        = _get("ANGEL_MPIN",         "1008")
+ANGEL_TOTP_SECRET = _get("ANGEL_TOTP_SECRET",  "6IK5P2KWF3YULRMR6VSUVZZVLI")
+FLASK_SECRET_KEY  = _get("FLASK_SECRET_KEY",   "sbin-secret-2024")
+
+# Angel One NSE token IDs
 SYMBOLS = {
-    "SBIN":   {"token": "3045",  "exchange": "NSE", "name": "State Bank of India"},
-    "NIFTY":  {"token": "26000", "exchange": "NSE", "name": "Nifty 50"},
+    "SBIN":  {"token": "3045",  "exchange": "NSE", "name": "State Bank of India"},
+    "NIFTY": {"token": "26000", "exchange": "NSE", "name": "Nifty 50"},
 }
 
 INTERVAL_MAP = {
@@ -25,6 +36,6 @@ INTERVAL_MAP = {
     "1d":  "ONE_DAY",
 }
 
-IST_TZ = "Asia/Kolkata"
+IST_TZ       = "Asia/Kolkata"
 MARKET_OPEN  = "09:15"
 MARKET_CLOSE = "15:30"

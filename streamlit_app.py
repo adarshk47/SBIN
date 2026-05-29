@@ -46,13 +46,16 @@ st.markdown("""
 @st.cache_resource
 def get_api():
     api = AngelOneAPI()
-    api.authenticate()
+    ok  = api.authenticate()
+    if not ok:
+        st.error("Angel One login failed — check credentials in Streamlit Secrets.", icon="🔴")
     return api
 
 
 @st.cache_data(ttl=30)
 def fetch_live():
-    return get_api().get_ltp("SBIN"), get_api().get_ltp("NIFTY")
+    api = get_api()
+    return api.get_ltp("SBIN"), api.get_ltp("NIFTY")
 
 
 @st.cache_data(ttl=60)
@@ -88,35 +91,59 @@ def rsi_color(v):
 # ════════════════════════════════════════════════════════
 
 # ── Header ──────────────────────────────────────────────
-now_ist = datetime.now(IST)
+now_ist  = datetime.now(IST)
+api      = get_api()
+conn     = api.auth_status()
+
+# Show connection warning once at top
+if not conn["connected"]:
+    st.warning(
+        "Angel One API not connected. "
+        "Make sure Streamlit Secrets are set correctly (see sidebar ▶).",
+        icon="⚠️"
+    )
+    with st.expander("How to fix — Streamlit Secrets setup"):
+        st.code("""
+# Go to your Streamlit Cloud app → Settings → Secrets
+# Paste exactly this (replace values if needed):
+
+ANGEL_API_KEY     = "LkKs5NJG"
+ANGEL_CLIENT_ID   = "A114064"
+ANGEL_PASSWORD    = "Mahadev1@#"
+ANGEL_TOTP_SECRET = "6IK5P2KWF3YULRMR6VSUVZZVLI"
+        """, language="toml")
+        if st.button("Retry Connection"):
+            st.cache_resource.clear()
+            st.rerun()
+
 sbin_ltp, nifty_ltp = fetch_live()
 
 h1, h2, h3, h4 = st.columns([2, 1.5, 1.5, 1])
 with h1:
+    dot = "🟢" if conn["connected"] else "🔴"
     st.markdown("## 📈 SBIN Intraday Analyzer")
-    st.caption(f"Angel One • NSE • {now_ist.strftime('%d %b %Y  %H:%M:%S IST')}")
+    st.caption(f"{dot} Angel One • NSE • {now_ist.strftime('%d %b %Y  %H:%M:%S IST')}")
 
 with h2:
-    if sbin_ltp:
+    if sbin_ltp and sbin_ltp.get("ltp"):
         chg = sbin_ltp['ltp'] - sbin_ltp['close']
         pct = chg / sbin_ltp['close'] * 100 if sbin_ltp['close'] else 0
-        delta_str = f"{chg:+.2f} ({pct:+.2f}%)"
-        st.metric("SBIN", f"₹{sbin_ltp['ltp']:.2f}", delta_str)
+        st.metric("SBIN", f"₹{sbin_ltp['ltp']:.2f}", f"{chg:+.2f} ({pct:+.2f}%)")
     else:
-        st.metric("SBIN", "—")
+        st.metric("SBIN", "—", "Market closed / No data")
 
 with h3:
-    if nifty_ltp:
+    if nifty_ltp and nifty_ltp.get("ltp"):
         chg = nifty_ltp['ltp'] - nifty_ltp['close']
         pct = chg / nifty_ltp['close'] * 100 if nifty_ltp['close'] else 0
-        delta_str = f"{chg:+.2f} ({pct:+.2f}%)"
-        st.metric("NIFTY 50", f"₹{nifty_ltp['ltp']:.2f}", delta_str)
+        st.metric("NIFTY 50", f"₹{nifty_ltp['ltp']:.2f}", f"{chg:+.2f} ({pct:+.2f}%)")
     else:
-        st.metric("NIFTY 50", "—")
+        st.metric("NIFTY 50", "—", "Market closed / No data")
 
 with h4:
     if st.button("↻ Refresh Now", use_container_width=True):
         st.cache_data.clear()
+        st.cache_resource.clear()
         st.rerun()
 
 st.divider()
