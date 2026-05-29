@@ -1,9 +1,8 @@
-streamlit==1.35.0
-plotly==5.22.0
-streamlit-autorefresh==1.0.1
-pandas==2.2.2
-numpy==1.26.4
-pyotp==2.9.0
-pytz==2024.1
-python-dotenv==1.0.1
-requests==2.32.3
+streamlit
+plotly
+pandas
+numpy
+pyotp
+pytz
+python-dotenv
+requests

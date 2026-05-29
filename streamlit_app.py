@@ -5,8 +5,6 @@ from plotly.subplots import make_subplots
 import pandas as pd
 from datetime import datetime
 import pytz
-from streamlit_autorefresh import st_autorefresh
-
 from angel_api import AngelOneAPI
 from analysis import to_df, add_indicators, generate_signals, correlation_analysis, pivot_points
 
@@ -20,8 +18,8 @@ st.set_page_config(
 
 IST = pytz.timezone("Asia/Kolkata")
 
-# ── Auto refresh every 60s ───────────────────────────────
-st_autorefresh(interval=60_000, key="auto_refresh")
+# ── Auto refresh via HTML meta tag (no extra package needed) ──
+st.markdown('<meta http-equiv="refresh" content="60">', unsafe_allow_html=True)
 
 # ── Custom CSS ───────────────────────────────────────────
 st.markdown("""
