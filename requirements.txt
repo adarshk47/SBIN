@@ -2,6 +2,7 @@ streamlit
 plotly
 pandas
 numpy
+yfinance
 pyotp
 pytz
 python-dotenv
