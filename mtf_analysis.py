@@ -131,3 +131,54 @@ def overall_bias(mtf: list) -> dict:
         bias, color = "MIXED / SIDEWAYS", "#d29922"
 
     return {"bias": bias, "color": color, "bull": bull, "bear": bear, "neutral": neut}
+
+
+def ema_crossovers(candles: list, max_events: int = 15) -> list:
+    """
+    Detect EMA9 / EMA21 crossover events from candle list.
+    Returns list of dicts sorted newest first.
+    """
+    if not candles or len(candles) < 25:
+        return []
+
+    import pandas as pd
+    from analysis import ema as calc_ema
+
+    df = pd.DataFrame(candles)
+    df["time"]  = pd.to_datetime(df["time"])
+    df["close"] = df["close"].astype(float)
+    df["ema9"]  = calc_ema(df["close"], 9)
+    df["ema21"] = calc_ema(df["close"], 21)
+
+    # Prev diff and current diff — sign change = crossover
+    df["diff"]  = df["ema9"] - df["ema21"]
+    df["prev_diff"] = df["diff"].shift(1)
+
+    events = []
+    for _, row in df.iterrows():
+        if pd.isna(row["prev_diff"]) or pd.isna(row["diff"]):
+            continue
+        # Bullish crossover: EMA9 crosses above EMA21
+        if row["prev_diff"] <= 0 < row["diff"]:
+            events.append({
+                "type":  "BULLISH",
+                "arrow": "↑",
+                "color": "#3fb950",
+                "time":  row["time"].strftime("%H:%M"),
+                "price": round(float(row["close"]), 2),
+                "ema9":  round(float(row["ema9"]),  2),
+                "ema21": round(float(row["ema21"]), 2),
+            })
+        # Bearish crossover: EMA9 crosses below EMA21
+        elif row["prev_diff"] >= 0 > row["diff"]:
+            events.append({
+                "type":  "BEARISH",
+                "arrow": "↓",
+                "color": "#f85149",
+                "time":  row["time"].strftime("%H:%M"),
+                "price": round(float(row["close"]), 2),
+                "ema9":  round(float(row["ema9"]),  2),
+                "ema21": round(float(row["ema21"]), 2),
+            })
+
+    return list(reversed(events))[:max_events]
